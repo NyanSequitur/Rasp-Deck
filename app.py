@@ -65,11 +65,11 @@ def spotifyAPIPull():
         trackQueue.put(current_track)
         time.sleep(1)
 
-def spotifyDraw(device, currentlyDisplayed):
+def spotifyDraw(device, currentlyDisplayed, forceUpdate):
     
     songNameUpdate=trackQueue.get()
 
-    if songNameUpdate != currentlyDisplayed:
+    if songNameUpdate != currentlyDisplayed or forceUpdate:
         currentlyDisplayed = songNameUpdate
         fontsize=1
             
@@ -164,8 +164,8 @@ def network(iface):
 
 def stats(device):
     # use custom font
-    font_path = str(Path(__file__).resolve().parent.joinpath('fonts', 'C&C Red Alert [INET].ttf'))
-    font2 = ImageFont.truetype(font_path, 12)
+    
+    font2 = ImageFont.truetype('Noto.otf', 10)
 
     with canvas(device) as draw:
         draw.text((0, 0), cpu_usage(), font=font2, fill="white")
@@ -262,18 +262,20 @@ def stats(device):
 
 def screenDraw():
     currentlyDisplayed=''
-
+    forceUpdate=False
 
     mode = modeQueue.get()
     device = get_device()
     while True:
         if not modeQueue.empty():
             mode = modeQueue.get()
+            forceUpdate=True
         print(mode)
         if mode == 'spotify':
-            currentlyDisplayed = spotifyDraw(device, currentlyDisplayed)
+            currentlyDisplayed = spotifyDraw(device, currentlyDisplayed, forceUpdate)
         if mode == 'pi_info':
             stats(device)
+        forceUpdate=False
 
             
 
@@ -283,9 +285,6 @@ def led_on_r():
     modeQueue.put('spotify')
     print("spotify button")
     return "ok"
-
-
-
 
 @app.route("/pi_info", methods=["POST"])
 def led_off_r():
@@ -302,10 +301,6 @@ if __name__ == '__main__':
 
     spotifyProc = multiprocessing.Process(target=spotifyAPIPull, args=())
     screenProc = multiprocessing.Process(target=screenDraw, args=())
-
-
-
-
     spotifyProc.start()
     screenProc.start()
 
