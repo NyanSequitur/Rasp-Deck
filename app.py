@@ -8,6 +8,9 @@ from pathlib import Path
 from datetime import datetime
 import psutil
 
+import keyOutput
+
+
 trackQueue = multiprocessing.Queue()
 
 logging.disable(logging.CRITICAL)
@@ -188,69 +191,14 @@ def stats(device):
 
 
 
+            
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+def keySwitchFunc():
+    testMessage=['windows','s','s','h',' ','r','a','s','p','b','e','r','r','y','p','i','.','l','o','c','a','l','return']
+    keyOutput.pinSetup([26])
+    while True:
+        keyOutput.macroButton(26,testMessage)
 
 
 
@@ -267,10 +215,10 @@ def screenDraw():
     mode = modeQueue.get()
     device = get_device()
     while True:
+        print(mode)
         if not modeQueue.empty():
             mode = modeQueue.get()
             forceUpdate=True
-        print(mode)
         if mode == 'spotify':
             currentlyDisplayed = spotifyDraw(device, currentlyDisplayed, forceUpdate)
         if mode == 'pi_info':
@@ -301,7 +249,8 @@ if __name__ == '__main__':
 
     spotifyProc = multiprocessing.Process(target=spotifyAPIPull, args=())
     screenProc = multiprocessing.Process(target=screenDraw, args=())
+    keySwitchProc=multiprocessing.Process(target=keySwitchFunc,args=())
     spotifyProc.start()
+    keySwitchProc.start()
     screenProc.start()
-
     app.run(debug=True,host="0.0.0.0",port=5000,use_reloader=False)
