@@ -9,7 +9,7 @@ from datetime import datetime
 import psutil
 
 import keyOutput
-
+import subprocess
 
 trackQueue = multiprocessing.Queue()
 
@@ -21,6 +21,11 @@ trackQueue = multiprocessing.Queue()
 
 modeQueue = multiprocessing.Queue()
 
+scope = 'user-read-currently-playing user-read-recently-played'
+   
+token = util.prompt_for_user_token(12173622847, scope, client_id='7b7b8b48cb6d45a89e18a4e7684ee8fc', client_secret='0a825bd502344d9ca6e5afe9c4bf2101', redirect_uri="http://localhost:8888/callback")
+
+spotify = spotipy.Spotify(auth=token)
 
 
 
@@ -28,37 +33,9 @@ modeQueue = multiprocessing.Queue()
 
 
 
+def spotifyAPIPull(spotify):
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# SPOTIFY FUNCTION
-
-
-def spotifyAPIPull():
-
-    scope = 'user-read-currently-playing user-read-recently-played'
-    token = util.prompt_for_user_token(12173622847, scope, client_id='7b7b8b48cb6d45a89e18a4e7684ee8fc', client_secret='0a825bd502344d9ca6e5afe9c4bf2101', redirect_uri="http://localhost:8888/callback")
-    spotify = spotipy.Spotify(auth=token)
+    
     while True:
         
         try:
@@ -122,12 +99,7 @@ def spotifyDraw(device, currentlyDisplayed, forceUpdate):
 
 
 def bytes2human(n):
-    """
-    >>> bytes2human(10000)
-    '9K'
-    >>> bytes2human(100001221)
-    '95M'
-    """
+
     symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
     prefix = {}
     for i, s in enumerate(symbols):
@@ -137,6 +109,30 @@ def bytes2human(n):
             value = int(float(n) / prefix[s])
             return '%s%s' % (value, s)
     return "%sB" % n
+
+
+
+    cmd = "hostname -I | cut -d\' \' -f1"
+    IP = subprocess.check_output(cmd, shell = True )
+    cmd = "top -bn1 | grep load | awk '{printf \"CPU Load: %.2f\", $(NF-2)}'"
+    CPU = subprocess.check_output(cmd, shell = True )
+    cmd = "free -m | awk 'NR==2{printf \"Mem: %s/%sMB %.2f%%\", $3,$2,$3*100/$2 }'"
+    MemUsage = subprocess.check_output(cmd, shell = True )
+    cmd = "df -h | awk '$NF==\"/\"{printf \"Disk: %d/%dGB %s\", $3,$2,$5}'"
+    Disk = subprocess.check_output(cmd, shell = True )
+
+
+
+
+
+
+
+
+
+
+
+def getIP():
+    return subprocess.check_output("hostname -I | cut -d\' \' -f1", shell = True )
 
 
 def cpu_usage():
@@ -166,22 +162,15 @@ def network(iface):
 
 
 def stats(device):
-    # use custom font
     
     font2 = ImageFont.truetype('Noto.otf', 10)
 
     with canvas(device) as draw:
         draw.text((0, 0), cpu_usage(), font=font2, fill="white")
-        if device.height >= 32:
-            draw.text((0, 14), mem_usage(), font=font2, fill="white")
+        draw.text((0, 14), mem_usage(), font=font2, fill="white")
 
-        if device.height >= 64:
-            draw.text((0, 26), disk_usage('/'), font=font2, fill="white")
-            try:
-                draw.text((0, 38), network('wlan0'), font=font2, fill="white")
-            except KeyError:
-                # no wifi enabled/available
-                pass
+        draw.text((0, 26), disk_usage('/'), font=font2, fill="white")
+        draw.text((0, 38), str(getIP(), 'utf-8'), font=font2, fill="white")
 
 
 
@@ -195,16 +184,19 @@ def stats(device):
 
 
 def keySwitchFunc():
-    testMessage=['windows','s','s','h',' ','r','a','s','p','b','e','r','r','y','p','i','.','l','o','c','a','l','return']
-    keyOutput.pinSetup([26])
+
+    pinList=[[26,19],[13,6]]
+    keyOutput.pinSetup(pinList)
+    pressedStatus=[True,True]
+    position = 0
+    
     while True:
-        keyOutput.macroButton(26,testMessage)
+        for pin in pinList[0]:
+            position = pinList[0].index(pin)
+            pressedStatus[position]=keyOutput.macroButton(pin,'key'+str(position+1)+'.csv',pressedStatus[position])
 
 
-
-
-
-
+        
 
 
 
@@ -247,7 +239,7 @@ def home():
 
 if __name__ == '__main__':
 
-    spotifyProc = multiprocessing.Process(target=spotifyAPIPull, args=())
+    spotifyProc = multiprocessing.Process(target=spotifyAPIPull, args=(spotify,))
     screenProc = multiprocessing.Process(target=screenDraw, args=())
     keySwitchProc=multiprocessing.Process(target=keySwitchFunc,args=())
     spotifyProc.start()
