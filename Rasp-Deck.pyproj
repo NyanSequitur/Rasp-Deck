@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{16b35896-b44f-4c64-a531-4057dc5f0508}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>Standalone\test.py</StartupFile>
+    <StartupFile>Standalone\server.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -24,8 +24,10 @@
     <Compile Include="demo_opts.py" />
     <Compile Include="keyOutput.py" />
     <Compile Include="Standalone\badApple.py" />
+    <Compile Include="Standalone\client.py" />
     <Compile Include="Standalone\demo_opts.py" />
     <Compile Include="Standalone\keyOutput.py" />
+    <Compile Include="Standalone\server.py" />
     <Compile Include="Standalone\Spotify.py" />
     <Compile Include="Standalone\test.py" />
   </ItemGroup>

@@ -26,6 +26,7 @@ LCTRL=1
 
 def write_report(report):
     with open('/dev/hidg0', 'rb+') as fd:
+        print(report.encode())
         fd.write(report.encode())
 
 def null_report():
@@ -99,7 +100,6 @@ def macroButton(pin, strokeOrder, previousState):
 
     inputValue = GPIO.input(pin)
 
-
     if isinstance(strokeOrder,str):
         file=open(strokeOrder,'r')
         strokeOrder=[]
@@ -111,8 +111,7 @@ def macroButton(pin, strokeOrder, previousState):
         for command in commandList:
             if command == NULL_CHAR*2+chr(40)+NULL_CHAR*5:
                 time.sleep(1)
-                print("return sleep")
-                    
+                print("return sleep")   
 
             write_report(command)
 
@@ -130,4 +129,74 @@ def funcMacroButton(pin, previousState, function, args=''):
     inputValue = GPIO.input(pin)
     if (inputValue == False and previousState == True):
         function(*args)
+    return inputValue
+
+
+def funcSwitch(pin, previousState, onFunc, offFunc, onFuncArgs='', offFuncArgs=''):
+    inputValue = GPIO.input(pin)
+    if (inputValue == False and previousState == True):
+        onFunc(*onFuncArgs)
+    elif (inputValue == True and previousState == False):
+        offFunc(*offFuncArgs)
+    return inputValue
+
+def oneFuncSwitch(pin, previousState, function, funcArgs=''):
+    inputValue = GPIO.input(pin)
+    if ((inputValue == False and previousState == True) or (inputValue == True and previousState == False)):
+        function(*funcArgs)
+    return inputValue
+
+
+
+def volumeWheel(volUpPin,volDownPin,prevStates):
+    pinSetup([[volUpPin,volDownPin]])
+    volumeUp = GPIO.input(volUpPin)
+    volumeDown = GPIO.input(volDownPin)
+    volUpState,volDownState=prevStates
+
+    if (volumeUp == False and volUpState == True):
+        print("volume up")
+        write_report(NULL_CHAR*2+chr(ord('a') - 93)+NULL_CHAR*5)
+    if (volumeDown == False and volDownState == True):
+        print("volume down")
+        write_report(NULL_CHAR*2+chr(ord('a') - 93)+NULL_CHAR*5)
+    return volumeUp, volumeDown
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def oneMacroSwitch(pin, strokeOrder, previousState):
+    inputValue = GPIO.input(pin)
+
+    if isinstance(strokeOrder,str):
+        file=open(strokeOrder,'r')
+        strokeOrder=[]
+        for line in file:
+            strokeOrder.append(list(filter(None,line.strip('\n').split(','))))
+
+    if ((inputValue == False and previousState == True) or (inputValue == True and previousState == False)):
+        commandList=commandToOutput(strokeOrder)
+        for command in commandList:
+            if command == NULL_CHAR*2+chr(40)+NULL_CHAR*5:
+                time.sleep(1)
+                print("return sleep")   
+
+            write_report(command)
+
+            if command == chr(8)+NULL_CHAR*7:
+                null_report()
+                time.sleep(1)
+                print("windows sleep")
+        else:
+            write_report(NULL_CHAR*8)
     return inputValue

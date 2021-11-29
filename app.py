@@ -21,12 +21,11 @@ trackQueue = multiprocessing.Queue()
 
 modeQueue = multiprocessing.Queue()
 
-scope = 'user-read-currently-playing user-read-recently-played'
+scope = 'user-read-currently-playing user-read-recently-played user-modify-playback-state'
    
 token = util.prompt_for_user_token(12173622847, scope, client_id='7b7b8b48cb6d45a89e18a4e7684ee8fc', client_secret='0a825bd502344d9ca6e5afe9c4bf2101', redirect_uri="http://localhost:8888/callback")
 
 spotify = spotipy.Spotify(auth=token)
-
 
 
 
@@ -183,18 +182,43 @@ def stats(device):
             
 
 
-def keySwitchFunc():
+def keySwitchFunc(spotify):
 
-    pinList=[[26,19],[13,6]]
-    keyOutput.pinSetup(pinList)
-    pressedStatus=[True,True]
-    position = 0
+    pinList=[[26,19],[13,6],[23],[24]]
     
+    keyOutput.pinSetup(pinList)
+    pressedStatus=[[True, True],[True, True],[True]]
+    position = 0
+
+    volumeStatus=(True,True)
+
     while True:
+
+        funcList=[[spotify.next_track,''], [spotify.previous_track,'']]
+
+        # keystroke macros
+
         for pin in pinList[0]:
             position = pinList[0].index(pin)
-            pressedStatus[position]=keyOutput.macroButton(pin,'key'+str(position+1)+'.csv',pressedStatus[position])
+            pressedStatus[0][position]=keyOutput.macroButton(pin,'key'+str(position+1)+'.csv',pressedStatus[0][position])
 
+        # function macros
+
+        for pin in pinList[1]:
+            position = pinList[1].index(pin)
+            pressedStatus[1][position]=keyOutput.funcMacroButton(pin,pressedStatus[1][position],funcList[position][0],funcList[position][1])
+        
+        # two-function switches
+
+        for pin in pinList[2]:
+            position = pinList[2].index(pin)
+            pressedStatus[2][0]=keyOutput.funcSwitch(pin, pressedStatus[2][position], spotify.start_playback, spotify.pause_playback)
+
+        # toggle switches
+
+        # volume
+        volumeStatus=keyOutput.volumeWheel(15,18,volumeStatus)
+        
 
         
 
@@ -241,7 +265,7 @@ if __name__ == '__main__':
 
     spotifyProc = multiprocessing.Process(target=spotifyAPIPull, args=(spotify,))
     screenProc = multiprocessing.Process(target=screenDraw, args=())
-    keySwitchProc=multiprocessing.Process(target=keySwitchFunc,args=())
+    keySwitchProc=multiprocessing.Process(target=keySwitchFunc,args=(spotify,))
     spotifyProc.start()
     keySwitchProc.start()
     screenProc.start()
