@@ -30,6 +30,7 @@
     <Compile Include="Standalone\server.py" />
     <Compile Include="Standalone\Spotify.py" />
     <Compile Include="Standalone\test.py" />
+    <Compile Include="Standalone\volumeTest.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Standalone\frames\bad_apple_001.png" />

@@ -1,5 +1,7 @@
 # first of all import the socket library
 import socket			
+import volumeTest
+import random
 
 # next create a socket object
 s = socket.socket()		
@@ -21,19 +23,28 @@ print ("socket binded to %s" %(port))
 s.listen(5)	
 print ("socket is listening")		
 
+ev = volumeTest.IAudioEndpointVolume.get_default()
+vol = ev.GetMasterVolumeLevelScalar()
+vmin, vmax, vinc = ev.GetVolumeRange()
+
+
+
+
 # a forever loop until we interrupt it or
 # an error occurs
+c, addr = s.accept()
+print ('Got connection from', addr )
+
 while True:
 
 # Establish connection with client.
-    c, addr = s.accept()	
-    print ('Got connection from', addr )
+    
 
-    # send a thank you message to the client. encoding to send byte type.
-    c.send('Thank you for connecting'.encode())
+    dataFromClient = c.recv(1024)
 
-    # Close the connection with the client
-    c.close()
-
-    # Breaking once connection closed
-    break
+    if dataFromClient.decode() == 'up':
+        ev.VolumeStepUp()
+        print('up')
+    elif dataFromClient.decode == 'down':
+        ev.VolumeStepDown()
+        print('down')
