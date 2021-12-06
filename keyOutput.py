@@ -92,6 +92,9 @@ def commandToOutput(inputList):
             elif key == '=':
                 temp+=chr(46)
                 keyCount += 1
+            elif key == 'f4':
+                temp += chr(61)
+                keyCount += 1
             else:
                 temp += chr(ord(key) - 93)
                 keyCount += 1
@@ -113,8 +116,8 @@ def commandToOutput(inputList):
 def macroButton(pin, strokeOrder, previousState):
 
     inputValue = GPIO.input(pin)
-    if inputValue == 0:
-        print(pin)
+
+
     if (isinstance(strokeOrder,str)):
         file=open(strokeOrder,'r')
         strokeOrder=[]
@@ -154,6 +157,83 @@ def funcSwitch(pin, previousState, onFunc, offFunc, onFuncArgs='', offFuncArgs='
     elif (inputValue == True and previousState == False):
         offFunc(*offFuncArgs)
     return inputValue
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def twoTextSwitch(pin, previousState, onText, offText):
+
+    inputValue = GPIO.input(pin)
+    if (inputValue == False and previousState == True):
+
+        commandList=commandToOutput(onText)
+        for command in commandList:
+            if command == NULL_CHAR*2+chr(40)+NULL_CHAR*5:
+                time.sleep(1)
+                print("return sleep")   
+
+            write_report(command)
+
+            if command == chr(8)+NULL_CHAR*7:
+                null_report()
+                time.sleep(1)
+                print("windows sleep")
+        write_report(NULL_CHAR*8)
+
+
+    elif (inputValue == True and previousState == False):
+
+        commandList=commandToOutput(offText)
+        for command in commandList:
+            if command == NULL_CHAR*2+chr(40)+NULL_CHAR*5:
+                time.sleep(1)
+                print("return sleep")   
+
+            write_report(command)
+
+            if command == chr(8)+NULL_CHAR*7:
+                null_report()
+                time.sleep(1)
+                print("windows sleep")
+        write_report(NULL_CHAR*8)
+    return inputValue
+
+
+
+
+
+
+
+
+
+
+
+def spotifyToggle(pin, previousState, spotify):
+    inputValue = GPIO.input(pin)
+    if (inputValue == False and previousState == True):
+        print("spotify pressed")
+        if spotify.current_playback()['is_playing']:
+            spotify.pause_playback()
+        else:
+            spotify.start_playback()
+    return inputValue
+
+
 
 def oneFuncSwitch(pin, previousState, function, funcArgs=''):
     inputValue = GPIO.input(pin)

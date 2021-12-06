@@ -60,4 +60,5 @@ while True:
                 ev.SetMute(True)
             muteStatus = not muteStatus
         elif decodedData == 'exit':
+
             searching = True

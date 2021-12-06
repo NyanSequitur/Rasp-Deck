@@ -1,5 +1,5 @@
 from flask import Flask, render_template
-import textwrap, multiprocessing, logging, spotipy, time, textwrap, os, socket, psutil, atexit
+import textwrap, multiprocessing, logging, spotipy, time, textwrap, os, socket, psutil, atexit, signal
 import spotipy.util as util
 from PIL import ImageFont
 from demo_opts import get_device
@@ -29,7 +29,7 @@ socketPass = multiprocessing.Queue()
 
 
 
-scope = 'user-read-currently-playing user-read-recently-played user-modify-playback-state'
+scope = 'user-read-currently-playing user-read-recently-played user-modify-playback-state user-read-playback-state'
    
 token = util.prompt_for_user_token(12173622847, scope, client_id='7b7b8b48cb6d45a89e18a4e7684ee8fc', client_secret='0a825bd502344d9ca6e5afe9c4bf2101', redirect_uri="http://localhost:8888/callback")
 
@@ -177,18 +177,32 @@ def keySwitchFunc(spotify):
 
 
     
-    pinList=[[26,19,13,16],[6,5],[],[]]
+    pinList=[[26,19,13,16],[6,5],[],[14]]
     
     keyOutput.pinSetup(pinList)
-    pressedStatus=[[True, True, True, True],[True,True],[]]
-    position = 0
+    pressedStatus=[]
+
+    tempList=[]
+
+    for mode in pinList:
+        for pin in mode:
+            tempList.append(True)
+        pressedStatus.append(tempList)
+        tempList=[]
+
+
+
+
 
     
+    position = 0
+    spotifyStatus=False
+    privateWindowStatus=False
     
     while True:
 
         funcList=[[spotify.next_track,''], [spotify.previous_track,'']]
-
+        switchFuncList=[]
         # keystroke macros
 
         for pin in pinList[0]:
@@ -206,10 +220,11 @@ def keySwitchFunc(spotify):
 
         for pin in pinList[2]:
             position = pinList[2].index(pin)
-            pressedStatus[2][0]=keyOutput.funcSwitch(pin, pressedStatus[2][position], spotify.start_playback, spotify.pause_playback)
+        
+        keyOutput.pinSetupDown([[20]])
 
-        # toggle switches
-
+        privateWindowStatus = keyOutput.twoTextSwitch(20,privateWindowStatus,[['lalt','f4']],[['windows'],'h','t','t','p','s',['lshift',';'],'/','/','g','o','o','g','l','e','.','c','o','m',['return']])
+        spotifyStatus = keyOutput.spotifyToggle(14,spotifyStatus,spotify)
      
 
 
@@ -256,8 +271,12 @@ def screenDraw():
 
     mode = modeQueue.get()
     device = get_device()
+    onToggle = True
+
+
     while True:
         if not modeQueue.empty():
+            previousMode=mode
             mode = modeQueue.get()
             forceUpdate=True
         if mode == 'spotify':
@@ -286,20 +305,29 @@ def home():
     return render_template("button.html", title="Button", name="Sam Clark")
 
 def exit_handler(led):
-    led.stop()
-    s = socketPass.get()
-    print("socketPass got")
-    s.send('exit'.encode())
-    s.close()
 
+
+    print("turning LED off")
+    GPIO.output(led, GPIO.LOW)
+    print("LED off")
+
+    print("getting socket")
+    s = socketPass.get()
+    print("got socket")
+
+    print("sending exit message")
+    s.send('exit'.encode())
+
+    print("closing socket")
+    s.close()
+    print("socket closed")
 
 if __name__ == '__main__':
     led = 23
     GPIO.setup(led, GPIO.OUT)
-    pwmled=GPIO.PWM(led,50)
-    pwmled.start(5)
+    GPIO.output(led, GPIO.HIGH)
 
-    atexit.register(exit_handler,pwmled)
+    
     spotifyProc = multiprocessing.Process(target=spotifyAPIPull, args=(spotify,))
     screenProc = multiprocessing.Process(target=screenDraw, args=())
     keySwitchProc=multiprocessing.Process(target=keySwitchFunc,args=(spotify,))
@@ -308,4 +336,6 @@ if __name__ == '__main__':
     keySwitchProc.start()
     screenProc.start()
     volumeProc.start()
+    modeQueue.put('spotify')
+    atexit.register(exit_handler,led)
     app.run(debug=True,host="0.0.0.0",port=5000,use_reloader=False)
