@@ -1,12 +1,16 @@
 from flask import Flask, render_template
-import textwrap, multiprocessing, logging, spotipy, time, textwrap, os
+import textwrap, multiprocessing, logging, spotipy, time, textwrap, os, socket, psutil, atexit
 import spotipy.util as util
 from PIL import ImageFont
 from demo_opts import get_device
 from luma.core.render import canvas
 from pathlib import Path
 from datetime import datetime
-import psutil
+import RPi.GPIO as GPIO
+
+
+
+from encoder import Encoder
 
 import keyOutput
 import subprocess
@@ -20,6 +24,10 @@ app = Flask(__name__)
 trackQueue = multiprocessing.Queue()
 
 modeQueue = multiprocessing.Queue()
+
+socketPass = multiprocessing.Queue()
+
+
 
 scope = 'user-read-currently-playing user-read-recently-played user-modify-playback-state'
    
@@ -111,25 +119,6 @@ def bytes2human(n):
 
 
 
-    cmd = "hostname -I | cut -d\' \' -f1"
-    IP = subprocess.check_output(cmd, shell = True )
-    cmd = "top -bn1 | grep load | awk '{printf \"CPU Load: %.2f\", $(NF-2)}'"
-    CPU = subprocess.check_output(cmd, shell = True )
-    cmd = "free -m | awk 'NR==2{printf \"Mem: %s/%sMB %.2f%%\", $3,$2,$3*100/$2 }'"
-    MemUsage = subprocess.check_output(cmd, shell = True )
-    cmd = "df -h | awk '$NF==\"/\"{printf \"Disk: %d/%dGB %s\", $3,$2,$5}'"
-    Disk = subprocess.check_output(cmd, shell = True )
-
-
-
-
-
-
-
-
-
-
-
 def getIP():
     return subprocess.check_output("hostname -I | cut -d\' \' -f1", shell = True )
 
@@ -184,14 +173,18 @@ def stats(device):
 
 def keySwitchFunc(spotify):
 
-    pinList=[[26,19],[13,6],[23],[24]]
+
+
+
+    
+    pinList=[[26,19,13,16],[6,5],[],[]]
     
     keyOutput.pinSetup(pinList)
-    pressedStatus=[[True, True],[True, True],[True]]
+    pressedStatus=[[True, True, True, True],[True,True],[]]
     position = 0
 
-    volumeStatus=(True,True)
-
+    
+    
     while True:
 
         funcList=[[spotify.next_track,''], [spotify.previous_track,'']]
@@ -201,6 +194,7 @@ def keySwitchFunc(spotify):
         for pin in pinList[0]:
             position = pinList[0].index(pin)
             pressedStatus[0][position]=keyOutput.macroButton(pin,'key'+str(position+1)+'.csv',pressedStatus[0][position])
+            
 
         # function macros
 
@@ -216,12 +210,44 @@ def keySwitchFunc(spotify):
 
         # toggle switches
 
-        # volume
-        volumeStatus=keyOutput.volumeWheel(15,18,volumeStatus)
+     
+
+
+def volumeControl():
+    keyOutput.pinSetupDown([[21]])
+    
+
+    volumeWheel = Encoder(15,18)
+    
+    currentValue = volumeWheel.getValue()
+    updatedValue = currentValue
+
+    s = socket.socket()         # Create a socket object
+    host = '10.245.97.39'
+    port = 12345                # Reserve a port for your service.
+
+
+    socketPass.put(s)
+
+    s.connect((host, port))
+
+    muteStatus=True
+
+
+
+    while True:
+        updatedValue = volumeWheel.getValue()
+        if currentValue != updatedValue:
+            if currentValue < updatedValue:
+                s.send('d'.encode())
+            else:
+                s.send('u'.encode())
+        currentValue = updatedValue        
+        muteStatus=keyOutput.oneFuncSwitch(21,muteStatus,sendMessage,(s,'m'))
         
 
-        
-
+def sendMessage(s, message):
+    s.send(message.encode())
 
 
 def screenDraw():
@@ -231,7 +257,6 @@ def screenDraw():
     mode = modeQueue.get()
     device = get_device()
     while True:
-        print(mode)
         if not modeQueue.empty():
             mode = modeQueue.get()
             forceUpdate=True
@@ -260,13 +285,27 @@ def led_off_r():
 def home():
     return render_template("button.html", title="Button", name="Sam Clark")
 
+def exit_handler(led):
+    led.stop()
+    s = socketPass.get()
+    print("socketPass got")
+    s.send('exit'.encode())
+    s.close()
+
 
 if __name__ == '__main__':
+    led = 23
+    GPIO.setup(led, GPIO.OUT)
+    pwmled=GPIO.PWM(led,50)
+    pwmled.start(5)
 
+    atexit.register(exit_handler,pwmled)
     spotifyProc = multiprocessing.Process(target=spotifyAPIPull, args=(spotify,))
     screenProc = multiprocessing.Process(target=screenDraw, args=())
     keySwitchProc=multiprocessing.Process(target=keySwitchFunc,args=(spotify,))
+    volumeProc=multiprocessing.Process(target=volumeControl,args=())
     spotifyProc.start()
     keySwitchProc.start()
     screenProc.start()
+    volumeProc.start()
     app.run(debug=True,host="0.0.0.0",port=5000,use_reloader=False)

@@ -22,6 +22,7 @@
   <ItemGroup>
     <Compile Include="app.py" />
     <Compile Include="demo_opts.py" />
+    <Compile Include="encoder.py" />
     <Compile Include="keyOutput.py" />
     <Compile Include="Standalone\badApple.py" />
     <Compile Include="Standalone\client.py" />

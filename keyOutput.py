@@ -1,7 +1,10 @@
 
 #!/usr/bin/env python3
 from os import write
-import time
+import time, socket
+
+
+from encoder import Encoder
 
 # import GPIOSimulator as GPIO
 import  RPi.GPIO as GPIO
@@ -26,7 +29,6 @@ LCTRL=1
 
 def write_report(report):
     with open('/dev/hidg0', 'rb+') as fd:
-        print(report.encode())
         fd.write(report.encode())
 
 def null_report():
@@ -38,20 +40,21 @@ def pinSetup(pins):
         for pin in category:
             GPIO.setup(pin, GPIO.IN,pull_up_down=GPIO.PUD_UP)
 
-
-
+def pinSetupDown(pins):
+    for category in pins:
+        for pin in category:
+            GPIO.setup(pin, GPIO.IN,pull_up_down=GPIO.PUD_DOWN)
 
 
 
 def commandToOutput(inputList):
     output=[]
-    print(inputList)
-    
     for keys in inputList:
         temp=''
         keyCount=0
         modifierKeys = 0
         for key in keys:
+            print(key)
             if key == 'rmeta':
                 modifierKeys += RMETA
             elif key == '`ralt':
@@ -77,12 +80,23 @@ def commandToOutput(inputList):
             elif key == 'return':
                 temp+=chr(40)
                 keyCount += 1
+            elif key.isdigit():
+                temp+=chr(int(key)+29)
+                keyCount += 1
+            elif key == '/':
+                temp+=chr(56)
+                keyCount += 1
+            elif key == ';':
+                temp+=chr(51)
+                keyCount += 1
+            elif key == '=':
+                temp+=chr(46)
+                keyCount += 1
             else:
                 temp += chr(ord(key) - 93)
                 keyCount += 1
         output.append(chr(modifierKeys)+NULL_CHAR+temp+NULL_CHAR*(6-keyCount))
         output.append(NULL_CHAR*8)
-        print("keys: "+str(keys)+" output:"+str(output[-1]))
         
                 
         
@@ -99,8 +113,9 @@ def commandToOutput(inputList):
 def macroButton(pin, strokeOrder, previousState):
 
     inputValue = GPIO.input(pin)
-
-    if isinstance(strokeOrder,str):
+    if inputValue == 0:
+        print(pin)
+    if (isinstance(strokeOrder,str)):
         file=open(strokeOrder,'r')
         strokeOrder=[]
         for line in file:
@@ -145,23 +160,6 @@ def oneFuncSwitch(pin, previousState, function, funcArgs=''):
     if ((inputValue == False and previousState == True) or (inputValue == True and previousState == False)):
         function(*funcArgs)
     return inputValue
-
-
-
-def volumeWheel(volUpPin,volDownPin,prevStates):
-    pinSetup([[volUpPin,volDownPin]])
-    volumeUp = GPIO.input(volUpPin)
-    volumeDown = GPIO.input(volDownPin)
-    volUpState,volDownState=prevStates
-
-    if (volumeUp == False and volUpState == True):
-        print("volume up")
-        write_report(NULL_CHAR*2+chr(ord('a') - 93)+NULL_CHAR*5)
-    if (volumeDown == False and volDownState == True):
-        print("volume down")
-        write_report(NULL_CHAR*2+chr(ord('a') - 93)+NULL_CHAR*5)
-    return volumeUp, volumeDown
-
 
 
 
