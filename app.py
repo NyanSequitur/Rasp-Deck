@@ -31,7 +31,7 @@ socketPass = multiprocessing.Queue()
 
 scope = 'user-read-currently-playing user-read-recently-played user-modify-playback-state user-read-playback-state'
    
-token = util.prompt_for_user_token(12173622847, scope, client_id='7b7b8b48cb6d45a89e18a4e7684ee8fc', client_secret='0a825bd502344d9ca6e5afe9c4bf2101', redirect_uri="http://localhost:8888/callback")
+token = util.prompt_for_user_token(12173622847, scope, client_id='', client_secret='', redirect_uri="http://localhost:8888/callback")
 
 spotify = spotipy.Spotify(auth=token)
 
